@@ -1,0 +1,67 @@
+[
+  {
+    "code": "INR",
+    "name": "Indian Rupee",
+    "symbol": "₹",
+    "numericCode": 356
+  },
+  {
+    "code": "USD",
+    "name": "United States Dollar",
+    "symbol": "$",
+    "numericCode": 840
+  },
+  {
+    "code": "EUR",
+    "name": "Euro",
+    "symbol": "€",
+    "numericCode": 978
+  },
+  {
+    "code": "JPY",
+    "name": "Japanese Yen",
+    "symbol": "¥",
+    "numericCode": 392
+  },
+  {
+    "code": "GBP",
+    "name": "British Pound Sterling",
+    "symbol": "£",
+    "numericCode": 826
+  },
+  {
+    "code": "AUD",
+    "name": "Australian Dollar",
+    "symbol": "A$"
+  },
+  {
+    "code": "CAD",
+    "name": "Canadian Dollar",
+    "symbol": "C$",
+    "numericCode": 124
+  },
+  {
+    "code": "CHF",
+    "name": "Swiss Franc",
+    "symbol": "CHF",
+    "numericCode": 756
+  },
+  {
+    "code": "CNY",
+    "name": "Chinese Yuan",
+    "symbol": "¥",
+    "numericCode": 156
+  },
+  {
+    "code": "NZD",
+    "name": "New Zealand Dollar",
+    "symbol": "NZ$",
+    "numericCode": 554
+  },
+  {
+    "code": "SEK",
+    "name": "Swedish Krona",
+    "symbol": "kr",
+    "numericCode": 752
+  }
+]

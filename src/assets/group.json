@@ -1,0 +1,7 @@
+{
+  "cash": "Cash",
+  "bank_account": "Bank Account",
+  "deposit": "Deposit",
+  "credit": "Credit",
+  "asset": "Asset"
+}
