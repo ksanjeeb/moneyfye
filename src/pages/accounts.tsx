@@ -87,7 +87,7 @@ const AccountsHeader = () => {
             label="Account"
             name="name"
             rules={[{ required: true, message: "Fill!" }]}
-            className="col-span-2"
+            className="col-span-3 md:col-span-2"
           >
             <Input placeholder="Enter account" className="w-full" />
           </Form.Item>
@@ -95,7 +95,7 @@ const AccountsHeader = () => {
           <Form.Item
             label="Group"
             name="group"
-            className="col-span-1"
+            className="col-span-3 md:col-span-1"
             rules={[{ required: true, message: "Please choose group!" }]}
           >
             <Select placeholder="Please select group">
@@ -127,12 +127,12 @@ const AccountsHeader = () => {
             label="Currency"
             name="currency"
             rules={[{ required: true, message: "Fill!" }]}
-            className="col-span-2"
+            className="col-span-3 md:col-span-2"
           >
             <InputNumber min={1} placeholder="Enter Amount" className="w-full" addonAfter={suffixSelector} />
           </Form.Item>
 
-          <Form.Item className="self-end">
+          <Form.Item className="self-end col-span-3 md:col-span-1">
             <Button type="primary" className="w-full" htmlType="submit">
               Save Account
             </Button>

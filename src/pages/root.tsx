@@ -91,11 +91,11 @@ const Root = () => {
               It could be cash in your wallet, bank accounts, credit cards or even a loan to your friend.
             </p>
 
-            <Form.Item label="Account" name="name" rules={[{ required: true, message: 'Fill!' }]} className="col-span-2"
+            <Form.Item label="Account" name="name" rules={[{ required: true, message: 'Fill!' }]} className="col-span-3 md:col-span-2"
             >
               <Input placeholder="Enter name" className='w-full' />
             </Form.Item>
-            <Form.Item label="Group" name="group" className="col-span-1"
+            <Form.Item label="Group" name="group" className="col-span-3 md:col-span-1"
               rules={[{ required: true, message: 'Please choose group!' }]}
             >
               <Select
@@ -110,11 +110,11 @@ const Root = () => {
             </Form.Item>
 
             <Form.Item label="Amount" name="amount" rules={[{ required: true, message: 'Fill!' }]}
-              className="col-span-2">
+              className="col-span-3 md:col-span-2">
               <InputNumber min={1} placeholder="Enter Amount" className='w-full' addonAfter={suffixSelector} />
             </Form.Item>
 
-            <Form.Item className="self-end">
+            <Form.Item className="self-end col-span-3 md:col-span-1">
               <Button type="primary" className="w-full " htmlType="submit">
                 Create Account
               </Button>

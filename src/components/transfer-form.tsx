@@ -111,7 +111,7 @@ const TransferForm = ({ initialData = {}, update = false, closeAction }:Transfer
             <Form.Item
                 label="From"
                 name="from"
-                className="col-span-2"
+                className="col-span-3 md:col-span-2"
                 rules={[{ required: true, message: 'Please choose account!' }]}
             >
                 <Select placeholder="Please select account" disabled={update}>
@@ -130,6 +130,7 @@ const TransferForm = ({ initialData = {}, update = false, closeAction }:Transfer
                 label="Currency"
                 name="currency"
                 rules={[{ required: true, message: 'Fill!' }]}
+                className="col-span-3 md:col-span-1"
             >
                 <InputNumber
                     min={1}
@@ -142,7 +143,7 @@ const TransferForm = ({ initialData = {}, update = false, closeAction }:Transfer
             <Form.Item
                 label="To"
                 name="to"
-                className="col-span-2"
+                className="col-span-3 md:col-span-2"
                 rules={[{ required: true, message: 'Please choose account!' }]}
             >
                 <Select placeholder="Please select account" disabled={update}>
@@ -161,19 +162,20 @@ const TransferForm = ({ initialData = {}, update = false, closeAction }:Transfer
                 label="Date"
                 name='date'
                 rules={[{ required: true, message: 'Fill!' }]}
+                className="col-span-3 md:col-span-1"
             >
                 <DatePicker className="w-full" format={dateFormat}/>
             </Form.Item>
 
             <Form.Item
                 label="Note"
-                className="col-span-2"
+                className="col-span-3 md:col-span-2"
                 name='note'
             >
                 <Input.TextArea placeholder="Note" rows={2} className="w-full" />
             </Form.Item>
 
-            <Form.Item className="self-end">
+            <Form.Item className="self-end col-span-3 md:col-span-1">
                 <Button type="primary" className="w-full" htmlType="submit">
                     {update ? "Update Transfer" : "Add Transfer"}
                 </Button>

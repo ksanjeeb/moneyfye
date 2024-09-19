@@ -115,7 +115,7 @@ const ExpenseIncomForm = ({ type = "expense", initialData = {}, update, closeAct
             <Form.Item
                 label={type === "expense" ? "From" : "To"}
                 name="account_id"
-                className="col-span-2"
+                className="col-span-3 md:col-span-2"
                 rules={[{ required: true, message: 'Please choose user!' }]}
             >
                 <Select placeholder="Please select user" disabled={update}>
@@ -130,7 +130,7 @@ const ExpenseIncomForm = ({ type = "expense", initialData = {}, update, closeAct
                 </Select>
             </Form.Item>
 
-            <Form.Item label="Currency" name="currency" rules={[{ required: true, message: 'Fill!' }]}>
+            <Form.Item label="Currency" className="col-span-3 md:col-span-1" name="currency" rules={[{ required: true, message: 'Fill!' }]}>
                 <InputNumber
                     min={1}
                     placeholder="Enter Amount"
@@ -139,7 +139,7 @@ const ExpenseIncomForm = ({ type = "expense", initialData = {}, update, closeAct
                 />
             </Form.Item>
 
-            <Form.Item label="Tags" className="col-span-2" name='tags'>
+            <Form.Item label="Tags" className="col-span-3 md:col-span-2" name='tags'>
                 <Select
                     mode="tags"
                     placeholder="Choose existing tags or add new"
@@ -151,15 +151,15 @@ const ExpenseIncomForm = ({ type = "expense", initialData = {}, update, closeAct
                 </Select>
             </Form.Item>
 
-            <Form.Item label="Date" name='date' rules={[{ required: true, message: 'Fill!' }]}>
+            <Form.Item label="Date" className="col-span-3 md:col-span-1" name='date' rules={[{ required: true, message: 'Fill!' }]}>
                 <DatePicker className="w-full" format={dateFormat} />
             </Form.Item>
 
-            <Form.Item label="Note" className="col-span-2" name='note'>
+            <Form.Item label="Note" className="col-span-3 md:col-span-2" name='note'>
                 <Input.TextArea placeholder="Note" rows={2} className="w-full" />
             </Form.Item>
 
-            <Form.Item className="self-end">
+            <Form.Item className="self-end col-span-3 md:col-span-1">
                 <Button type="primary" className="w-full" htmlType="submit">
                     {update ?
                         (type === "expense" ? "Update Expense" : "Update Income") :
