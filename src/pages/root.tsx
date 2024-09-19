@@ -33,7 +33,6 @@ const Root = () => {
       },
     }
 
-    console.log(values)
     dispatch(addAccount(payload));
     navigate("/dashboard");
   };
@@ -66,7 +65,7 @@ const Root = () => {
           <p>Select your base currency — the currency which will be used by default.</p>
           <Form name="create_ac"
             className="grid grid-cols-3 gap-x-4 w-full mx-" layout='vertical' onFinish={onFinish} >
-            <Form.Item label="Currency" name="currencies" rules={[{ required: true, message: 'Fill!' }]} className="col-span-1"
+            <Form.Item label="Currency" name="currencies" rules={[{ required: true, message: 'Fill!' }]} className="col-span-3 md:col-span-1"
             >
               <Select
                 showSearch
