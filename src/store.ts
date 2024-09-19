@@ -1,46 +1,29 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { configureStore } from "@reduxjs/toolkit";
 import userDataReducer from "../src/slices/user-details";
-import { openDB } from "idb";
 
-const loadState = async () => {
+const loadState = () => {
   try {
-    const db = await openDB("moneyfyeDB", 1, {
-      upgrade(db) {
-        db.createObjectStore("userState");
-      },
-    });
-    const serializedState = await db.get("userState", "state");
-    if (!serializedState) return undefined;
+    const serializedState = localStorage.getItem("userState");
+    if (serializedState === null) return undefined;
     return JSON.parse(serializedState);
   } catch (err) {
+    console.error("Failed to load state from localStorage", err);
     return undefined;
   }
 };
 
-const saveState = async (state: any) => {
+export const store = configureStore({
+  reducer: userDataReducer,
+  preloadedState: loadState(),
+});
+
+store.subscribe(() => {
   try {
-    const db = await openDB("moneyfyeDB", 1);
-    await db.put("userState", JSON.stringify(state), "state");
+    const serializedState = JSON.stringify(store.getState());
+    localStorage.setItem("userState", serializedState);
   } catch (err) {
-    console.error("Failed to save state to IndexedDB", err);
+    console.error("Failed to save state to localStorage", err);
   }
-};
-
-export const setupStore = async () => {
-  const preloadedState = await loadState();
-  const store = configureStore({
-    reducer: userDataReducer,
-    preloadedState,
-  });
-
-  store.subscribe(async () => {
-    saveState(store.getState());
-  });
-
-  return store;
-};
-
-export const store = await setupStore();
+});
 
 export type RootState = ReturnType<typeof store.getState>;
