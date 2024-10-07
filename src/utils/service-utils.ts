@@ -1,6 +1,6 @@
 import { getBearerToken } from "./custom";
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.VITE_API_URL;
 
 const fetchData = async (url: string, options: RequestInit): Promise<any> => {
   const response = await fetch(url, options);
