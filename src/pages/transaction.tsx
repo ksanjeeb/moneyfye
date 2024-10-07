@@ -1,4 +1,4 @@
-import { Button, Divider, List, Tag } from "antd";
+import { Button, Divider, List, Select, Spin, Tag } from "antd";
 import { CirclePlus } from "lucide-react";
 import { DatePicker } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -10,8 +10,13 @@ import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import PageHeader from "../components/page-header";
-
+import toast from "react-hot-toast";
+import apiService from "../utils/service-utils";
+import { formatDate } from "../utils/custom";
+const { Option } = Select;
 const { RangePicker } = DatePicker;
+import VirtualList from 'rc-virtual-list';
+import { debounce } from "lodash";
 
 dayjs.extend(customParseFormat);
 dayjs.extend(isSameOrAfter);
@@ -42,6 +47,9 @@ interface TransactionFooterProps {
     transactions: Transaction[];
 }
 
+
+
+
 const TransactionFooter = ({ transactions }: TransactionFooterProps) => {
     const totalsByType = useMemo(() => {
         const totals: { income: { [key: string]: number }; expense: { [key: string]: number } } = {
@@ -51,16 +59,17 @@ const TransactionFooter = ({ transactions }: TransactionFooterProps) => {
 
         transactions.forEach((transaction) => {
             const { related_currency, amount, transaction_type } = transaction;
+            const numericAmount = typeof amount === "string" ? parseFloat(amount) : amount;
             if (transaction_type === "income") {
                 if (!totals.income[related_currency]) {
                     totals.income[related_currency] = 0;
                 }
-                totals.income[related_currency] += amount;
+                totals.income[related_currency] += numericAmount;
             } else if (transaction_type === "expense") {
                 if (!totals.expense[related_currency]) {
                     totals.expense[related_currency] = 0;
                 }
-                totals.expense[related_currency] += Math.abs(amount);
+                totals.expense[related_currency] += Math.abs(numericAmount);
             }
         });
 
@@ -100,10 +109,53 @@ const TransactionFooter = ({ transactions }: TransactionFooterProps) => {
 };
 
 const Transaction = () => {
-    const transactions: any = useSelector((state: RootState) => state.transactions);
-    const accounts: Account[] = useSelector((state: RootState) => state.accounts);
-    const [filteredTransaction, setFilteredTransaction] = useState<any>(transactions);
+    const [transactions, setTransactions] = useState<any[]>([]);
     const [dateString, setDateString] = useState<[string, string]>(["", ""]);
+    const [transactionType, setTransactionType] = useState<string>("all");
+    const [transactionLoading, setTransactionLoading] = useState(false);
+    const accounts: Account[] = useSelector((state: RootState) => state.accounts);
+    const triggerTransaction: any = useSelector((state: RootState) => state.trigger_transaction);
+    const [skip, setSkip] = useState(0);
+    const [totalTransExist, setTotalTransExist] = useState(0);
+
+    const fetchTransactions = async (data: any, _skip: number) => {
+        try {
+            setTransactionLoading(true);
+
+            let url = `/transaction/list?skip=${_skip}&limit=10`;
+
+            if (dateString[0] && dateString[1]) {
+                const [startDate, endDate] = dateString;
+                url += `&start_date=${startDate}&end_date=${endDate}`;
+            }
+
+            if (transactionType) {
+                url += `&transaction_type=${transactionType}`;
+            }
+
+            const response = await apiService.get(url);
+
+            if (response.statusCode === 200) {
+                setTransactions([...data, ...response.data]);
+                setTotalTransExist(response?.total || 0)
+                setSkip([...data, ...response.data]?.length || 0)
+            } else {
+                throw new Error(response.message);
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Transaction retrieval failed!");
+        } finally {
+            setTransactionLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTransactions([], 0);
+    }, [dateString, transactionType, triggerTransaction]);
+
+    const handleDateChange = (_event: any, dateStrings: [string, string]) => {
+        setDateString(dateStrings);
+    };
 
     const findName = useCallback(
         (account_id: string) => {
@@ -113,83 +165,115 @@ const Transaction = () => {
         [accounts]
     );
 
-    const handleChange = (_event: any, dateStrings: [string, string]) => {
-        setDateString(dateStrings)
-    };
 
-    useEffect(() => {
-        const _filtered = filterTransactionsByDate(dateString);
-        setFilteredTransaction(_filtered);
-    }, [accounts, dateString])
-
-    const filterTransactionsByDate = (dateRange: [string, string]) => {
-        const [start, end] = dateRange;
-        if (!start || !end) {
-            return transactions;
+    const onScroll = (e: React.UIEvent<HTMLElement, UIEvent>) => {
+        if (Math.abs(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - ContainerHeight) <= 2) {
+            debouncedFetchTransactions();
         }
-        const [startDate, endDate] = dateRange.map((date) => dayjs(date));
-        return transactions.filter((transaction: Transaction) => {
-            const transactionDate = dayjs(transaction.date);
-            return transactionDate.isSameOrAfter(startDate) && transactionDate.isSameOrBefore(endDate);
-        });
     };
+
+    const debouncedFetchTransactions = debounce(() => {
+        if (totalTransExist >= skip) {
+            fetchTransactions(transactions, skip);
+        }
+    }, 300);
+
+    const ContainerHeight = 400;
 
     return (
         <div className="h-full">
             <PageHeader>Transaction</PageHeader>
             <List
-                header={<TransactionHeader handleOnChange={handleChange} />}
-                footer={<TransactionFooter transactions={filteredTransaction} />}
+                header={<TransactionHeader handleOnChange={handleDateChange} setTransactionType={(value: string) => setTransactionType(value)} value={transactionType} />}
+                footer={<TransactionFooter transactions={transactions} />}
                 bordered
-                className="md:w-2/3 bg-stone-50"
-                dataSource={filteredTransaction}
-                renderItem={(item: Transaction) => (
-                    <List.Item className="flex flex-row justify-between">
-                        <div>
-                            <span className="text-stone-500">{item?.date}</span>{" "}
-                            {item?.transaction_type === "transfer_in" ? (
-                                <span className="px-2 font-medium">
-                                    {findName(item?.account_from!)}{" -> "}{findName(item?.account_to!)}
-                                </span>
-                            ) : (
-                                <span className="px-2 font-medium">{findName(item?.account_id)}</span>
-                            )}
-                            <span className="pl-1">
-                                {item?.tags?.map((el: string, index: number) => (
-                                    <Tag key={index}>{el}</Tag>
-                                ))}
-                            </span>
-                        </div>
-                        <div className="flex flex-row gap-1">
-                            <p
-                                className={`font-medium text-xl  pt-4 md:pt-0 md:text-sm ${item?.transaction_type === "expense"
-                                    ? "text-red-600"
-                                    : item?.transaction_type === "income"
-                                        ? "text-green-600"
-                                        : item?.transaction_type === "transfer_in"
-                                            ? "text-blue-600"
-                                            : ""
-                                    }`}
-                            >
-                                {item?.amount} {item?.related_currency}
-                            </p>
-                        </div>
-                    </List.Item>
+                className="md:w-2/3 bg-stone-50 transaction-list"
+                loading={transactionLoading}
+            >
+                {transactions.length > 0 ? (
+                    <VirtualList
+                        data={transactions}
+                        height={ContainerHeight}
+                        itemHeight={100}
+                        itemKey="transaction_id"
+                        onScroll={onScroll}
+                    >
+                        {(item: any) => (
+                            <List.Item key={item.transaction_id} className="flex flex-row justify-between">
+                                <div>
+                                    <span className="text-stone-500">{formatDate(item?.date)}</span>{" "}
+                                    {item?.transaction_type === "transfer_in" ? (
+                                        <span className="px-2 font-medium">
+                                            {findName(item?.account_from!)}{" -> "}{findName(item?.account_to!)}
+                                        </span>
+                                    ) : (
+                                        <span className="px-2 font-medium">{findName(item?.account_id)}</span>
+                                    )}
+                                    <span className="pl-1">
+                                        {item?.tags?.map((el: string, index: number) => (
+                                            <Tag key={index}>{el}</Tag>
+                                        ))}
+                                    </span>
+                                </div>
+                                <div className="flex flex-row gap-1">
+                                    <p
+                                        className={`font-medium text-xl pt-4 md:pt-0 md:text-sm ${item?.transaction_type === "expense"
+                                            ? "text-red-600"
+                                            : item?.transaction_type === "income"
+                                                ? "text-green-600"
+                                                : item?.transaction_type === "transfer_in"
+                                                    ? "text-blue-600"
+                                                    : ""
+                                            }`}
+                                    >
+                                        {item?.amount} {item?.related_currency}
+                                    </p>
+                                </div>
+                            </List.Item>
+                        )}
+                    </VirtualList>
+                ) : (
+                    <div className="text-center py-4">
+                        <p>No transactions found.</p>
+                    </div>
                 )}
-            />
+            </List>
+
         </div>
     );
 };
 
 
-const TransactionHeader = ({ handleOnChange }: any) => {
+
+
+
+
+
+
+
+const TransactionHeader = ({ handleOnChange, setTransactionType, transactionType }: any) => {
     const [openModal, setOpenModal] = useState({ value: false, data: {} });
     const handleShowModal = () => {
         setOpenModal({ value: true, data: {} });
     };
+
+    const handleTypeChange = (type: string | null) => {
+        setTransactionType(type);
+    };
+
     return (
         <div className="flex md:flex-row flex-col justify-end items-center gap-2">
-            <RangePicker onChange={handleOnChange} format={dateFormat} />
+            <RangePicker onChange={handleOnChange} format={"YYYY-MM-DD"} />
+            <Select
+                onChange={handleTypeChange}
+                className="w-36"
+                placeholder="Select transaction type"
+                value={transactionType}
+            >
+                <Option value="all">All</Option>
+                <Option value="income">Income</Option>
+                <Option value="expense">Expense</Option>
+            </Select>
             <Button onClick={handleShowModal}>
                 <CirclePlus size={16} /> Add new transaction
             </Button>
@@ -197,6 +281,7 @@ const TransactionHeader = ({ handleOnChange }: any) => {
         </div>
     );
 };
+
 
 
 export default Transaction;

@@ -2,4 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-
+::-webkit-scrollbar {
+    width: 8px;  /* Slim width */
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 10px;  
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;  
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+  }
+  
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  .transaction-list .ant-list-items {
+    height: calc(100vh - 400px);
+    overflow-y: scroll;
+  }

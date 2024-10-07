@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction, nanoid } from "@reduxjs/toolkit";
 
 interface Balance {
-  [currencyCode: string]: number;
+  [currency_code: string]: number;
 }
 
 interface Transaction {
@@ -39,7 +39,8 @@ interface Settings {
 
 interface TransactionPayload {
   id: string;
-  currencyCode: string;
+  transaction_id: string;
+  currency_code: string;
   amount: number;
   description: string;
   tags: string[];
@@ -47,9 +48,10 @@ interface TransactionPayload {
 }
 
 export interface TransferPayload {
-  fromAccountID: string;
-  fromCurrencyCode: string;
-  toAccountID: string;
+  from_account_id: string;
+  transaction_id: string;
+  from_currency_code: string;
+  to_account_id: string;
   amount: number;
   description?: string;
   tags: string[];
@@ -63,6 +65,9 @@ interface UserState {
   total_balance: number;
   total_income: number;
   total_expenses: number;
+  trigger_transaction: string;
+  trigger_accounts:string;
+  username?:string;
 }
 
 const initialState: UserState = {
@@ -72,6 +77,9 @@ const initialState: UserState = {
   total_balance: 0,
   total_income: 0,
   total_expenses: 0,
+  trigger_transaction:"",
+  trigger_accounts:"",
+  username:""
 };
 
 export interface AddAccountPayload {
@@ -94,24 +102,31 @@ export const userDataSlice = createSlice({
   initialState,
   reducers: {
     addIncome: (state, action: PayloadAction<TransactionPayload>) => {
-      const { currencyCode, amount, description, tags, id, date } =
-        action.payload;
+      const {
+        currency_code,
+        amount,
+        description,
+        tags,
+        id,
+        date,
+        transaction_id,
+      } = action.payload;
       const account = state.accounts.find((acc) => acc.id === id);
-      const currencyBalance = account?.balance[currencyCode];
+      const currencyBalance = account?.balance[currency_code];
 
       if (account && currencyBalance !== undefined) {
-        account.balance[currencyCode] += amount;
+        account.balance[currency_code] += amount;
 
         state.transactions?.push({
           account_id: id,
-          transaction_id: nanoid(),
+          transaction_id,
           amount,
           transaction_type: "income",
           date: new Date(date).toISOString().split("T")[0],
           description,
           tags,
           related_source: null,
-          related_currency: currencyCode,
+          related_currency: currency_code,
         });
 
         state.total_balance += amount;
@@ -120,24 +135,31 @@ export const userDataSlice = createSlice({
     },
 
     addExpense: (state, action: PayloadAction<TransactionPayload>) => {
-      const { currencyCode, amount, description, tags, id, date } =
-        action.payload;
+      const {
+        currency_code,
+        amount,
+        description,
+        tags,
+        id,
+        date,
+        transaction_id,
+      } = action.payload;
       const account = state.accounts.find((acc) => acc.id === id);
-      const currencyBalance = account?.balance[currencyCode];
+      const currencyBalance = account?.balance[currency_code];
 
       if (account && currencyBalance !== undefined) {
-        account.balance[currencyCode] -= amount;
+        account.balance[currency_code] -= amount;
 
         state.transactions?.push({
           account_id: id,
-          transaction_id: nanoid(),
+          transaction_id,
           amount: -amount,
           transaction_type: "expense",
           date: new Date(date).toISOString().split("T")[0],
           description,
           tags,
           related_source: null,
-          related_currency: currencyCode,
+          related_currency: currency_code,
         });
 
         state.total_balance -= amount;
@@ -147,51 +169,52 @@ export const userDataSlice = createSlice({
 
     transferMoney: (state, action: PayloadAction<TransferPayload>) => {
       const {
-        fromAccountID,
-        fromCurrencyCode,
-        toAccountID,
+        from_account_id,
+        from_currency_code,
+        to_account_id,
         amount,
         description,
         tags,
         date,
+        transaction_id,
       } = action.payload;
 
       const fromAccount = state.accounts.find(
-        (acc) => acc.id === fromAccountID
+        (acc) => acc.id === from_account_id
       );
-      const toAccount = state.accounts.find((acc) => acc.id === toAccountID);
+      const toAccount = state.accounts.find((acc) => acc.id === to_account_id);
 
-      const fromCurrencyBalance = fromAccount?.balance[fromCurrencyCode];
+      const fromCurrencyBalance = fromAccount?.balance[from_currency_code];
 
       if (fromAccount && toAccount && fromCurrencyBalance !== undefined) {
-        fromAccount.balance[fromCurrencyCode] -= amount;
+        fromAccount.balance[from_currency_code] -= amount;
 
-        if (toAccount.balance[fromCurrencyCode] !== undefined) {
-          toAccount.balance[fromCurrencyCode] += amount;
+        if (toAccount.balance[from_currency_code] !== undefined) {
+          toAccount.balance[from_currency_code] += amount;
         } else {
-          toAccount.balance[fromCurrencyCode] = amount;
+          toAccount.balance[from_currency_code] = amount;
         }
         state.transactions?.push({
-          account_from: fromAccountID,
-          account_to: toAccountID,
-          transaction_id: nanoid(),
+          account_from: from_account_id,
+          account_to: to_account_id,
+          transaction_id,
           amount,
           transaction_type: "transfer_in",
           date: new Date(date).toISOString().split("T")[0],
-          description: description || `Transfer from ${fromAccountID}`,
+          description: description || `Transfer from ${from_account_id}`,
           tags,
-          related_source: fromAccountID,
-          related_currency: fromCurrencyCode,
+          related_source: from_account_id,
+          related_currency: from_currency_code,
         });
       }
     },
 
     editTransaction: (state, action: PayloadAction<TransactionPayload>) => {
-      const { id, currencyCode, amount, description, tags, date } =
+      const { transaction_id, currency_code, amount, description, tags, date } =
         action.payload;
 
       const existingTransaction = state.transactions.find(
-        (transaction) => transaction.transaction_id === id
+        (transaction) => transaction.transaction_id === transaction_id
       );
 
       if (existingTransaction) {
@@ -207,20 +230,21 @@ export const userDataSlice = createSlice({
 
         const revertOldBalances = () => {
           if (existingTransaction.transaction_type === "income") {
-            account?.balance[currencyCode] !== undefined &&
-              (account.balance[currencyCode] -= existingTransaction.amount);
+            account?.balance[currency_code] !== undefined &&
+              (account.balance[currency_code] -= existingTransaction.amount);
             state.total_income -= existingTransaction.amount;
           } else if (existingTransaction.transaction_type === "expense") {
-            account?.balance[currencyCode] !== undefined &&
-              (account.balance[currencyCode] += Math.abs(
+            account?.balance[currency_code] !== undefined &&
+              (account.balance[currency_code] += Math.abs(
                 existingTransaction.amount
               ));
             state.total_expenses -= Math.abs(existingTransaction.amount);
           } else if (existingTransaction.transaction_type === "transfer_in") {
-            fromAccount?.balance[currencyCode] !== undefined &&
-              (fromAccount.balance[currencyCode] += existingTransaction.amount);
-            toAccount?.balance[currencyCode] !== undefined &&
-              (toAccount.balance[currencyCode] -= existingTransaction.amount);
+            fromAccount?.balance[currency_code] !== undefined &&
+              (fromAccount.balance[currency_code] +=
+                existingTransaction.amount);
+            toAccount?.balance[currency_code] !== undefined &&
+              (toAccount.balance[currency_code] -= existingTransaction.amount);
           }
         };
 
@@ -231,21 +255,21 @@ export const userDataSlice = createSlice({
         existingTransaction.date = new Date(date).toISOString().split("T")[0];
         existingTransaction.description = description;
         existingTransaction.tags = tags;
-        existingTransaction.related_currency = currencyCode;
+        existingTransaction.related_currency = currency_code;
 
         if (existingTransaction.transaction_type === "income") {
-          account?.balance[currencyCode] !== undefined &&
-            (account.balance[currencyCode] += amount);
+          account?.balance[currency_code] !== undefined &&
+            (account.balance[currency_code] += amount);
           state.total_income += amount;
         } else if (existingTransaction.transaction_type === "expense") {
-          account?.balance[currencyCode] !== undefined &&
-            (account.balance[currencyCode] -= Math.abs(amount));
+          account?.balance[currency_code] !== undefined &&
+            (account.balance[currency_code] -= Math.abs(amount));
           state.total_expenses += Math.abs(amount);
         } else if (existingTransaction.transaction_type === "transfer_in") {
-          fromAccount?.balance[currencyCode] !== undefined &&
-            (fromAccount.balance[currencyCode] -= amount);
-          toAccount?.balance[currencyCode] !== undefined &&
-            (toAccount.balance[currencyCode] += amount);
+          fromAccount?.balance[currency_code] !== undefined &&
+            (fromAccount.balance[currency_code] -= amount);
+          toAccount?.balance[currency_code] !== undefined &&
+            (toAccount.balance[currency_code] += amount);
         }
 
         state.total_balance = state.accounts.reduce((total, account) => {
@@ -320,6 +344,30 @@ export const userDataSlice = createSlice({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
+
+    addName:(state,action)=>{
+      state.username = action.payload;
+    },
+
+    addAllAccount: (state, action) => {
+      state.accounts = action.payload;
+    },
+
+    addAllTransactions: (state, action) => {
+      state.transactions = action.payload;
+    },
+
+    appendTransaction:(state, action)=>{
+      state.transactions.push({...action.payload})
+    },
+
+    triggerTransaction:(state)=>{
+      state.trigger_transaction = nanoid();
+    },
+
+    triggerAccount:(state)=>{
+      state.trigger_accounts = nanoid();
+    }
   },
 });
 
@@ -332,5 +380,11 @@ export const {
   editAccount,
   removeAllAccount,
   downloadStateJSON,
+  addAllAccount,
+  addAllTransactions,
+  appendTransaction,
+  triggerAccount,
+  triggerTransaction,
+  addName
 } = userDataSlice.actions;
 export default userDataSlice.reducer;

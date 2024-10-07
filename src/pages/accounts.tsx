@@ -1,13 +1,14 @@
 import { Button, Form, Input, InputNumber, List, Modal, Select } from "antd";
 import { Option } from "antd/es/mentions";
 import { CirclePlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import currency from "../assets/currency.json";
 import { useDispatch, useSelector } from "react-redux";
-import { addAccount } from "../slices/user-details";
 import { RootState } from "../store";
-import { convertToTitleCase } from "../utils/custom";
+import { convertToTitleCase, fetchAccounts } from "../utils/custom";
 import PageHeader from "../components/page-header";
+import toast from "react-hot-toast";
+import apiService from "../utils/service-utils";
 
 interface Account {
   name: string;
@@ -23,10 +24,12 @@ interface FormValues {
   suffix: string;
 }
 
-const AccountsHeader = () => {
+const AccountsHeader = ({ onSearch }: { onSearch: (searchTerm: string) => void }) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const showModal = () => {
     setIsModalOpen(true);
@@ -44,8 +47,27 @@ const AccountsHeader = () => {
         [values.suffix]: values.currency,
       },
     };
-    dispatch(addAccount(payload));
-    handleCancel();
+    saveAccount(payload);
+  };
+
+  const saveAccount = async (payload: any) => {
+    setLoading(true);
+    try {
+      const account_res = await apiService.post('/accounts', payload);
+      if (account_res.statusCode === 200) {
+        toast.success(account_res.message);
+        fetchAccounts();
+        handleCancel();
+        return;
+      }
+      toast.error(account_res.message);
+      return;
+    } catch (err: any) {
+      toast.error(err?.message || "Account save failed!");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const suffixSelector = (
@@ -71,8 +93,21 @@ const AccountsHeader = () => {
     setSelectedCurrencies(value);
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    onSearch(value);
+  };
+
   return (
     <div className="flex justify-end items-center gap-2">
+      <Input
+        type="text"
+        placeholder="Search account name"
+        value={searchTerm}
+        onChange={handleSearchChange}
+        style={{ width: 200 }} 
+      />
       <Button onClick={showModal}>
         <CirclePlus size={16} /> Add new user
       </Button>
@@ -87,7 +122,7 @@ const AccountsHeader = () => {
             label="Account"
             name="name"
             rules={[{ required: true, message: "Fill!" }]}
-            className="col-span-3 md:col-span-2"
+            className="col-span-2"
           >
             <Input placeholder="Enter account" className="w-full" />
           </Form.Item>
@@ -95,7 +130,7 @@ const AccountsHeader = () => {
           <Form.Item
             label="Group"
             name="group"
-            className="col-span-3 md:col-span-1"
+            className="col-span-1"
             rules={[{ required: true, message: "Please choose group!" }]}
           >
             <Select placeholder="Please select group">
@@ -127,14 +162,19 @@ const AccountsHeader = () => {
             label="Currency"
             name="currency"
             rules={[{ required: true, message: "Fill!" }]}
-            className="col-span-3 md:col-span-2"
+            className="col-span-2"
           >
             <InputNumber min={1} placeholder="Enter Amount" className="w-full" addonAfter={suffixSelector} />
           </Form.Item>
 
-          <Form.Item className="self-end col-span-3 md:col-span-1">
-            <Button type="primary" className="w-full" htmlType="submit">
-              Save Account
+          <Form.Item className="self-end">
+            <Button
+              type="primary"
+              className="w-full"
+              htmlType="submit"
+              loading={loading}
+            >
+              {loading ? "Saving..." : "Save Account"}
             </Button>
           </Form.Item>
         </Form>
@@ -143,8 +183,20 @@ const AccountsHeader = () => {
   );
 };
 
+
 const Accounts = () => {
   const accounts = useSelector((state: RootState) => state.accounts);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter(account =>
+      account.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [accounts, searchTerm]);
 
   const groupedAccounts = useMemo(() => {
     return accounts.reduce((acc: Record<string, Account[]>, account: Account) => {
@@ -160,32 +212,40 @@ const Accounts = () => {
     <div className="h-full">
       <PageHeader>Accounts</PageHeader>
       <List
-        header={<AccountsHeader />}
+        header={<AccountsHeader onSearch={handleSearch} />}
         bordered
         className="md:w-2/3 bg-stone-50"
         dataSource={Object.entries(groupedAccounts)}
-        renderItem={([group, item]: [string, Account[]]) => (
-          <>
-            <List.Item className="flex flex-row justify-between bg-stone-200 font-medium">
-              {convertToTitleCase(group)}
-            </List.Item>
-            {item?.map((el) => (
-              <List.Item className="flex flex-row justify-between" key={el.name}>
-                <span>{el.name}</span>
-                <div className="text-right">
-                  {Object.entries(el?.balance).map(([currency, amount]) => (
-                    <p key={`${currency}-${amount}`} className="font-semibold">
-                      {amount} {currency}
-                    </p>
-                  ))}
-                </div>
+        renderItem={([group, accounts]: [string, Account[]]) => {
+          const filteredAccountsList = accounts.filter((account:any) => filteredAccounts.includes(account));
+
+          if (filteredAccountsList.length === 0) return null;
+
+          return (
+            <React.Fragment key={group}>
+              <List.Item className="flex flex-row justify-between bg-stone-200 font-medium">
+                {convertToTitleCase(group)}
               </List.Item>
-            ))}
-          </>
-        )}
+              {filteredAccountsList.map((account,index) => (
+                <List.Item className="flex flex-row justify-between" key={index}> 
+                  <span>{account.name}</span>
+                  <div className="text-right">
+                    {Object.entries(account.balance).map(([currency, amount]) => (
+                      <p key={`${currency}-${amount}`} className="font-semibold">
+                        {amount} {currency}
+                      </p>
+                    ))}
+                  </div>
+                </List.Item>
+              ))}
+            </React.Fragment>
+          );
+        }}
       />
     </div>
   );
 };
+
+
 
 export default Accounts;

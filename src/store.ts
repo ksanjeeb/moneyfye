@@ -14,13 +14,14 @@ const loadState = () => {
 
 export const store = configureStore({
   reducer: userDataReducer,
-  preloadedState: loadState(),
+  // preloadedState: loadState(),
 });
 
 store.subscribe(() => {
   try {
     const serializedState = JSON.stringify(store.getState());
-    localStorage.setItem("userState", serializedState);
+    // console.log(serializedState)
+    // localStorage.setItem("userState", serializedState);
   } catch (err) {
     console.error("Failed to save state to localStorage", err);
   }

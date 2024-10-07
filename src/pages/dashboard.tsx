@@ -1,14 +1,16 @@
-import { Card, Tag } from "antd";
-import { Pencil } from "lucide-react";
+import { Card, Dropdown, MenuProps, Space, Spin, Tag, Typography } from "antd";
+import { ChevronDown, Pencil } from "lucide-react";
 import TransactionMenu from "../components/transaction-menu";
 import FormModal from "../components/form-modal";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import Currency from "../assets/currency.json";
 import Group from "../assets/group.json";
-import { getCurrencySymbol } from "../utils/custom";
+import { formatDate, getCurrencySymbol } from "../utils/custom";
 import PageHeader from "../components/page-header";
+import apiService from "../utils/service-utils";
+import toast from "react-hot-toast";
 
 interface Account {
   id: string;
@@ -26,7 +28,7 @@ interface Transaction {
   related_currency: string;
   date: string;
   tags?: string[];
-  hide?:boolean;
+  hide?: boolean;
 }
 
 interface ModalState {
@@ -37,11 +39,57 @@ interface ModalState {
 
 export const Dashboard = () => {
   const accounts = useSelector((state: RootState) => state.accounts as Account[]);
+  const triggerTrans = useSelector((state: RootState) => state.transactions);
+
   const [openModal, setOpenModal] = useState<ModalState>({ value: false, data: {} });
-  const transactions = useSelector((state: RootState) => state.transactions as Transaction[]);
+  const [transactionFilter, setTransactionFilter] = useState("recent");
+  const [transactionLoading, setTransactionLoading] = useState(false)
+  const [transactions, setTransactions] = useState<any>([]);
 
   const handleShowModal = (transaction: Transaction) => {
     setOpenModal({ value: true, data: transaction });
+  };
+
+
+  useEffect(() => {
+
+    fetchTransactions();
+
+  }, [transactionFilter , triggerTrans])
+
+
+  const fetchTransactions = async () => {
+    try {
+      setTransactionLoading(true);
+      const today = new Date();
+      const todayDate = today.toISOString().split('T')[0];
+
+      let url = "/transaction/list?";
+
+      if (transactionFilter === "recent") {
+        url += 'limit=10&skip=0';
+      } else if (transactionFilter === 'today') {
+        url += `start_date=${todayDate}&end_date=${todayDate}`;
+      } else if (transactionFilter === 'yesterday') {
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const yesterdayDate = yesterday.toISOString().split('T')[0];
+        url += `start_date=${yesterdayDate}&end_date=${yesterdayDate}`;
+      }
+
+      const response = await apiService.get(url);
+
+      if (response.statusCode === 200) {
+        setTransactions(response.data);
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (err: any) {
+      setTransactions([])
+      toast.error(err?.message || "Transaction retrieval failed!");
+    } finally {
+      setTransactionLoading(false);
+    }
   };
 
   const totalBalances = useMemo(() => {
@@ -64,6 +112,22 @@ export const Dashboard = () => {
     [accounts]
   );
 
+
+  const items: MenuProps['items'] = [
+    {
+      key: 'recent',
+      label: 'Recent',
+    },
+    {
+      key: 'today',
+      label: 'Today',
+    },
+    {
+      key: 'yesterday',
+      label: 'Yesterday',
+    },
+  ];
+
   return (
     <div className="h-full">
       <PageHeader>Dashboard</PageHeader>
@@ -76,8 +140,8 @@ export const Dashboard = () => {
           </div>
           <TransactionMenu closeAction={() => null} />
         </div>
-        <div>
-          <Card className="w-full bg-gradient-to-r from-blue-100 to-cyan-100 md:w-96 p-4 rounded-xl shadow-lg md:m-2" size="small">
+        <div className="flex-grow">
+          <Card className="bg-gradient-to-r from-blue-100 to-cyan-100  p-4 rounded-xl shadow-lg w-full " size="small">
             <div className="font-extrabold text-gray-700 pb-4 text-xl border-b-2 border-cyan-300">Total Balances</div>
             <div className="flex flex-col space-y-4 mt-4">
               {Object.entries(totalBalances).map(([currency, amount]) => (
@@ -90,49 +154,67 @@ export const Dashboard = () => {
               ))}
             </div>
           </Card>
-          <div className="py-4 px-2">
-            <p>Recent Transactions</p>
-            <Card bordered={false} className="w-full mt-4">
-              {transactions?.length > 0 ? (
-                transactions.map((transaction, index) => (
-                  <div key={index} className="flex flex-row justify-between py-4 border-b-2">
-                    <div>
-                      <span className="text-stone-500">{transaction.date}</span>{" "}
-                      {transaction.transaction_type === "transfer_in" ? (
-                        <span>
-                          {findName(transaction.account_from)}{" -> "}{findName(transaction.account_to)}
+          <div className="py-4 px-2 mt-2">
+            <div className="flex flex-row justify-between">
+              <p>Recent Transactions</p>
+              <Dropdown
+                menu={{
+                  items,
+                  selectable: true,
+                  selectedKeys: [transactionFilter],
+                  onClick: (info) => setTransactionFilter(info.key),  // Capture click event from menu
+                }}
+              >
+                <Typography.Link>
+                  <Space>
+                    {transactionFilter.charAt(0).toUpperCase() + transactionFilter.slice(1)}
+                    <ChevronDown />
+                  </Space>
+                </Typography.Link>
+              </Dropdown>
+            </div>
+            <Spin spinning={transactionLoading} tip="Loading...">
+              <Card bordered={false} className="flex-grow min-h-0 max-h-full mt-4 h-[420px] overflow-y-auto">
+                {transactions?.length > 0 ? (
+                  transactions.map((transaction: any, index: number) => (
+                    <div key={index} className="flex flex-row justify-between py-4 border-b-2">
+                      <div>
+                        <span className="text-stone-500">{formatDate(transaction.date)}</span>{" "}
+                        {transaction.transaction_type === "transfer_in" ? (
+                          <span>
+                            {findName(transaction.account_from)}{" -> "}{findName(transaction.account_to)}
+                          </span>
+                        ) : (
+                          <span>{findName(transaction.account_id)}</span>
+                        )}
+                        <span className="pl-1">
+                          {transaction.tags?.map((tag: any, tagIndex: number) => (
+                            <Tag key={tagIndex}>{tag}</Tag>
+                          ))}
                         </span>
-                      ) : (
-                        <span>{findName(transaction.account_id)}</span>
-                      )}
-                      <span className="pl-1">
-                        {transaction.tags?.map((tag, tagIndex) => (
-                          <Tag key={tagIndex}>{tag}</Tag>
-                        ))}
-                      </span>
-                    </div>
-                    <div className="flex flex-row gap-1">
-                      <p
-                        className={`font-medium ${
-                          transaction.transaction_type === "expense"
+                      </div>
+                      <div className="flex flex-row gap-1">
+                        <p
+                          className={`font-medium ${transaction.transaction_type === "expense"
                             ? "text-red-600"
                             : transaction.transaction_type === "income"
-                            ? "text-green-600"
-                            : "text-blue-600"
-                        }`}
-                      >
-                        {transaction.amount} {transaction.related_currency}
-                      </p>
-                      {!transaction?.hide && <span className="ml-1 cursor-pointer hover:text-blue-800" onClick={() => handleShowModal(transaction)}>
-                        <Pencil size={16} />
-                      </span>}
+                              ? "text-green-600"
+                              : "text-blue-600"
+                            }`}
+                        >
+                          {transaction.amount} {transaction.related_currency}
+                        </p>
+                        {/* {!transaction?.hide && <span className="ml-1 cursor-pointer hover:text-blue-800" onClick={() => handleShowModal(transaction)}>
+                          <Pencil size={16} />
+                        </span>} */}
+                      </div>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="font-bold text-stone-500">No transaction.</div>
-              )}
-            </Card>
+                  ))
+                ) : (
+                  <div className="font-bold text-stone-500">No transaction.</div>
+                )}
+              </Card>
+            </Spin>
           </div>
         </div>
       </div>
