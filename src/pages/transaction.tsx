@@ -1,5 +1,5 @@
-import { Button, Divider, List, Select, Spin, Tag } from "antd";
-import { CirclePlus } from "lucide-react";
+import { Button, Divider, Dropdown, List, MenuProps, Select, Spin, Tag } from "antd";
+import { CirclePlus, Download } from "lucide-react";
 import { DatePicker } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FormModal from "../components/form-modal";
@@ -243,15 +243,7 @@ const Transaction = () => {
     );
 };
 
-
-
-
-
-
-
-
-
-const TransactionHeader = ({ handleOnChange, setTransactionType, transactionType }: any) => {
+const TransactionHeader = ({ handleOnChange, setTransactionType, transactionType, exportFilter, setExportFilter }: any) => {
     const [openModal, setOpenModal] = useState({ value: false, data: {} });
     const handleShowModal = () => {
         setOpenModal({ value: true, data: {} });
@@ -260,6 +252,29 @@ const TransactionHeader = ({ handleOnChange, setTransactionType, transactionType
     const handleTypeChange = (type: string | null) => {
         setTransactionType(type);
     };
+
+    const handleExportFilter = (type: any) => {
+
+    }
+
+
+    const items: MenuProps['items'] = [
+        {
+          label: <a href="https://www.antgroup.com">1st menu item</a>,
+          key: '0',
+        },
+        {
+          label: <a href="https://www.aliyun.com">2nd menu item</a>,
+          key: '1',
+        },
+        {
+          type: 'divider',
+        },
+        {
+          label: '3rd menu item',
+          key: '3',
+        },
+      ];
 
     return (
         <div className="flex md:flex-row flex-col justify-end items-center gap-2">
@@ -277,6 +292,9 @@ const TransactionHeader = ({ handleOnChange, setTransactionType, transactionType
             <Button onClick={handleShowModal}>
                 <CirclePlus size={16} /> Add new transaction
             </Button>
+            <Dropdown menu={{ items }} trigger={['click']}>
+               <Button ><Download size={16}/> Export </Button>
+            </Dropdown>
             <FormModal isModalOpen={openModal} setIsModalOpen={setOpenModal} isNew={true} />
         </div>
     );
