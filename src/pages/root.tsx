@@ -60,7 +60,16 @@ const Root = () => {
     <div className="h-screen grid place-items-center">
       <Card className="md:w-2/4 ">
         <div className="flex flex-col gap-2">
-          <p className="font-bold text-3xl pb-4">Moneyfye</p>
+        <p className="flex items-center font-bold text-3xl pb-2">
+                    <img
+                        src="/logo.svg"
+                        alt="Moneyfye Logo"
+                        className="w-8 h-8 mr-2"
+                    />
+                    <span className="text-orange-400 pb-1">
+                        Moneyfye
+                    </span>
+                </p>          
           <p className="text-xl ">Currencies</p>
           <p>Select your base currency — the currency which will be used by default.</p>
           <Form name="create_ac"
